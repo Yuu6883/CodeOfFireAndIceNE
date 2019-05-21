@@ -1,10 +1,12 @@
 class Player:
 
-    def __init__(self, index: int):
+    def __init__(self, index: int, print_turn = False):
         self.__index = index
         self.moves = 0
+        self.turns = 0
         self.message_queue = []
         self.transpose = False
+        self.print_turn = print_turn
 
     def get_index(self):
         return self.__index
@@ -30,7 +32,10 @@ class Player:
         raise NotImplementedError()
 
     def win(self, stats=None):
-        pass
+        print(str(self) + " won :D")
 
     def lose(self, stats=None):
-        pass
+        print(str(self) + " lost ):")
+
+    def __str__(self):
+        return type(self).__name__

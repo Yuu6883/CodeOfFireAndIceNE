@@ -11,7 +11,7 @@ import time
 
 class Engine:
 
-    def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, debug = False, strict = False):
+    def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, debug = False, strict = False, seed = random.randint(0, 2 * 31)):
         self.__players = []
         self.current_player: Player = None
         self.__state: GameState = None
@@ -25,7 +25,11 @@ class Engine:
         self.__debug = debug
         self.__strict = strict
         self.__error_log = []
+        self.seed = seed
 
+    def get_map(self):
+        return self.__state.get_map()
+    
     def set_league(self, league: LEAGUE):
         if self.__started:
             return print("Can't change league when the game already started")
@@ -40,59 +44,78 @@ class Engine:
         if len(self.__players) != PLAYER_COUNT:
             return print("Not enough player to initiate the game")
         self.__started = True
-        self.__state = GameState(random.randint(0, 2 * 31), LEAGUE.WOOD3)
+        self.__state = GameState(self.seed, LEAGUE.WOOD3)
         self.__state.generate_map(self.__league)
         self.__state.create_hq(PLAYER_COUNT)
 
         self.current_player = random.choice(self.__players)
         self.gameloop()
 
+    def get_turns(self):
+        return self.__turns
+
+    def get_player(self, index: int):
+        return self.__players[index]
+    
+    def get_income(self, index: int):
+        return self.__state.get_income(index)
+
+    def get_gold(self, index: int):
+        return self.__state.get_gold(index)
+
+    def game_over(self):
+        pass
+
     def gameloop(self):
-        while not self.__gameover:
-            if self.__debug:
-                print(f'\n\nTurn {self.__turns // 2}')
-            if self.__turns // 2 >= MAX_TURNS:
-                scores = self.__state.get_scores()
-                print("Scores:", scores)
-                if scores[0] > scores[1]:
-                    self.kill_player(self.__players[1])
-                elif scores[1] > scores[0]:
-                    self.kill_player(self.__players[0])
-                else:
-                    print("wow a tie")
-                    break
-            success = 0
-            self.__state.init_turn(self.current_player.get_index())
-            self.__state.send_state(self.current_player)
-            self.current_player.update()
-            try:
-                self.parse_action()
-                success = sum([self.execute_action(action) for action in self.__actions])
-            except Exception as e:
-                print("Caught Exception while executing an action:")
-                print(e, e.with_traceback())
-                # raise e
-                self.kill_player(self.current_player)
-            if success != len(self.__actions) and not self.__debug and not self.__strict:
-                print("Some actions failed, enable strict and debug mode to see more details")
-            self.__actions.clear()
-            self.__turns += 1
-            self.check_hq_capture()
-            self.current_player = self.__players[\
-                (self.__players.index(self.current_player) + 1)\
-                     % len(self.__players)]
-            if self.__sleep > 0:
-                time.sleep(self.__sleep)
+
+        if self.__gameover:
+            self.game_over()
+            return
+
+        if self.__turns // 2 >= MAX_TURNS:
+            scores = self.__state.get_scores()
+            print(f'Scores [ {self.__players[0]}: {scores[0]} ---- {self.__players[1]}: {scores[1]} ]')
+            if scores[0] > scores[1]:
+                self.kill_player(self.__players[1])
+            elif scores[1] > scores[0]:
+                self.kill_player(self.__players[0])
+            else:
+                print("Wow a tie")
+            return
+        success = 0
+        self.__state.init_turn(self.current_player.get_index())
+        self.__state.send_state(self.current_player)
+        self.current_player.update()
+        try:
+            self.parse_action()
+            success = sum([self.execute_action(action) for action in self.__actions])
+        except Exception as e:
+            print("Caught Exception while executing an action:")
+            print(e)
+            # raise e
+            self.kill_player(self.current_player)
+        if success != len(self.__actions) and not self.__debug and not self.__strict:
+            self.debug("Some actions failed, enable strict mode to see more details")
+        self.__actions.clear()
+        self.__turns += 1
+        self.check_hq_capture()
+        self.current_player = self.__players[\
+            (self.__players.index(self.current_player) + 1)\
+                    % len(self.__players)]
+        if self.__sleep > 0:
+            time.sleep(self.__sleep)
+
+        self.gameloop()
                     
     def kill_player(self, player: Player):
         player.lose()
-        [p.win() for p in self.__players]
+        [p.win() for p in self.__players if not p is player]
         self.__gameover = True
 
     def parse_action(self):
         # Referee.java readInput
         msg = self.current_player.get_message()
-        print("Player Message:", msg)
+        self.debug("Player Message:" + msg)
         actions_str = msg.split(";")
         for action_str in actions_str:
             action_str = action_str.strip(" ")
@@ -101,8 +124,8 @@ class Engine:
 
             # Ignore Msg Command
 
-            if not self.match_move_train(self.current_player, msg) and \
-                not self.match_build(self.current_player, msg):
+            if not self.match_move_train(self.current_player, action_str) and \
+                not self.match_build(self.current_player, action_str):
                 # self.throw(f'Message not matching any regex {action_str}')
                 print("Invalid Input: " + action_str)
                 
@@ -129,8 +152,7 @@ class Engine:
             self.create_train_action(player, id_or_level, x, y, msg)
         else:
             self.create_move_action(player, id_or_level, x, y, msg)   
-        return True
-        
+        return True  
 
     def match_build(self, player: Player, msg: str):
         if not BUILD_PATTERN.match(msg):
@@ -212,7 +234,7 @@ class Engine:
             return self.throw("Not enough gold to train unit")
 
         if not action.get_cell().is_capturable(action.get_player(), action.get_level()):
-            return self.throw("Can't capture cell")
+            return self.throw("Can't capture cell" + str(action.get_cell()))
         
         unit = Unit(action.get_cell(), action.get_player(), action.get_level())
         self.__state.add_unit(unit)

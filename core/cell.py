@@ -58,6 +58,10 @@ class Cell(Entity):
 
         if self.get_owner() != player_id and self.is_active() and self.is_protected() and level < CAPTURE_LEVEL:
             return False
+
+        if self.get_owner() != player_id and self.__building and \
+            self.__building.get_type() == BUILDING_TYPE.TOWER and level < CAPTURE_LEVEL:
+            return False
         
         if self.is_free():
             return True
@@ -88,7 +92,7 @@ class Cell(Entity):
     def is_playable(self, player_id: int):
         if self.get_owner() == player_id and self.is_active():
             return True
-        print(self.__neighbours)
+            
         for neighbor in self.__neighbours:
             if neighbor != None and neighbor.get_owner() == player_id and neighbor.is_active():
                 return True

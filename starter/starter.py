@@ -43,9 +43,9 @@ class MyUnit:
 
 class MyBuilding:
 
-    def __init__(self, owner, type, x, y):
+    def __init__(self, owner, b_type, x, y):
         self.owner = owner
-        self.type = type
+        self.type = b_type
         self.pos = Position(x, y)
 
     def __repr__(self):
@@ -55,10 +55,10 @@ class MyBuilding:
         return repr(self)
 
 
-class Bot(Player):
+class StarterBot(Player):
 
     def __init__(self, index: int):
-        super().__init__(index)
+        super().__init__(index, print_turn=False)
         self.buildings = []
         self.units = []
         self.actions = []
@@ -112,6 +112,9 @@ class Bot(Player):
 
     def update(self):
         # print(self.message_queue)
+        self.turns += 1
+        if self.print_turn:
+            print(f'\n\nTurn {self.turns}')
         self.units.clear()
         self.buildings.clear()
         self.actions.clear()
@@ -123,7 +126,6 @@ class Bot(Player):
 
         for _ in range(12):
             line = self.read_input()
-            print(line)
 
         building_count = int(self.read_input())
         for _ in range(building_count):

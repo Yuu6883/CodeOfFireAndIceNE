@@ -31,9 +31,6 @@ class Path:
                     if self.__distances[i][j] >= self.__distances[i][k] + self.__distances[k][j]:
                         self.__distances[i][j] = self.__distances[i][k] + self.__distances[k][j]
 
-        with open("distances.txt", "w") as f:
-            [f.write(repr(row)) for row in self.__distances]
-
     def get_nearest_cell(self, grid: List[List[Cell]], unit: Unit, target: Cell):
         start = unit.get_cell()
         player_id = unit.get_owner()

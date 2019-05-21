@@ -37,6 +37,9 @@ class GameState:
         self.__buildings = []
         self.__HQs = []
 
+    def get_map(self):
+        return self.__map
+
     def get_cell(self, x: int, y: int) -> Cell:
         return self.__map[x][y]
 
@@ -449,7 +452,7 @@ class GameState:
 
     def get_scores(self):
         scores = self.__player_golds.copy()
-        for unit in self.__units:
+        for unit in self.__units.values():
             scores[unit.get_owner()] += UNIT_COST[unit.get_level()]
         return scores
     
