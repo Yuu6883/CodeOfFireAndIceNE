@@ -1,8 +1,8 @@
-from constants import MAP_HEIGHT, MAP_WIDTH, UP, RIGHT, DOWN, LEFT, MAX_MOVE_LENGTH
-from cell import Cell
-from unit import Unit
+from .constants import MAP_HEIGHT, MAP_WIDTH, UP, RIGHT, DOWN, LEFT, MAX_MOVE_LENGTH
+from .cell import Cell
+from .unit import Unit
+from .vec2 import Vec2
 from typing import List
-from vec2 import Vec2
 
 class Path:
 
@@ -23,13 +23,16 @@ class Path:
                 for neighbor in cell.get_neighbors():
                     if neighbor:
                         self.__distances[self.get_id(cell)][self.get_id(neighbor)] = 1
-
+        
         # Floyd-Warshall
         for k in range(self.__MAP_SIZE):
             for i in range(self.__MAP_SIZE):
                 for j in range(self.__MAP_SIZE):
                     if self.__distances[i][j] >= self.__distances[i][k] + self.__distances[k][j]:
                         self.__distances[i][j] = self.__distances[i][k] + self.__distances[k][j]
+
+        with open("distances.txt", "w") as f:
+            [f.write(repr(row)) for row in self.__distances]
 
     def get_nearest_cell(self, grid: List[List[Cell]], unit: Unit, target: Cell):
         start = unit.get_cell()

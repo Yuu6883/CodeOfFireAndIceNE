@@ -1,15 +1,15 @@
-from constants import LEAGUE, MAP_HEIGHT, MAP_WIDTH, UNIT_COST, BUILDING_TYPE, PLAYER_COUNT, \
+from .constants import LEAGUE, MAP_HEIGHT, MAP_WIDTH, UNIT_COST, BUILDING_TYPE, PLAYER_COUNT, \
     NUMBER_MINESPOTS_MAX, NUMBER_MINESPOTS_MIN, VOID, UP, RIGHT, LEFT, DOWN, \
     NEUTRAL, MAPGENERATOR_T, MAPGENERATOR_R, MAPGENERATOR_ITERATIONSAUTOMATA, \
     BUILD_COST, MINE_INREMENT, CELL_INCOME, MINE_INCOME, UNIT_UPKEEP
-from cell import Cell
-from building import Building
-from unit import Unit
-from path import Path
-from typing import List
-from vec2 import Vec2
-from player import Player
+from .cell import Cell
+from .building import Building
+from .unit import Unit
+from .path import Path
+from .vec2 import Vec2
+from .player import Player
 import numpy as np
+from typing import List
 import random, math
 
 
@@ -62,9 +62,9 @@ class GameState:
         for x in range(MAP_WIDTH):
             for y in range(MAP_HEIGHT):
                 self.is_inside(x, y - 1) and self.__map[x][y].set_neighbor(UP, self.__map[x][y - 1])
-                self.is_inside(x, y + 1) and self.__map[x][y].set_neighbor(UP, self.__map[x][y + 1])
-                self.is_inside(x + 1, y) and self.__map[x][y].set_neighbor(UP, self.__map[x + 1][y])
-                self.is_inside(x - 1, y) and self.__map[x][y].set_neighbor(UP, self.__map[x - 1][y])
+                self.is_inside(x, y + 1) and self.__map[x][y].set_neighbor(DOWN, self.__map[x][y + 1])
+                self.is_inside(x + 1, y) and self.__map[x][y].set_neighbor(RIGHT, self.__map[x + 1][y])
+                self.is_inside(x - 1, y) and self.__map[x][y].set_neighbor(LEFT, self.__map[x - 1][y])
 
     def get_next_cell(self, unit: Unit, target: Cell) -> Cell:
         return self.__path_find.get_nearest_cell(self.__map, unit, target)
@@ -280,9 +280,13 @@ class GameState:
         self.compute_gold(player_id)
         if self.__player_golds[player_id] < 0:
             self.negative_gold_wipeout(player_id)
-        for unit in self.__units:
+        for unit in self.__units.values():
             if unit.get_owner() == player_id:
                 unit.new_turn()
+
+    def compute_all_active_cells(self):
+        for player_id in range(PLAYER_COUNT):
+            self.compute_active_cells(player_id)
 
     def compute_active_cells(self, player_id: int):
         for row in self.__map:
@@ -373,8 +377,7 @@ class GameState:
         new_pos.set_owner(unit.get_owner())
         new_pos.set_unit(unit)
 
-        for player_id in range(PLAYER_COUNT):
-            self.compute_income(player_id)
+        self.compute_all_income()
 
     def add_building(self, building: Building):
         self.__buildings.append(building)

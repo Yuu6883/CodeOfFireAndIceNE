@@ -1,5 +1,5 @@
-from constants import ACTIONTYPE, BUILDING_TYPE
-from cell import Cell
+from .constants import ACTIONTYPE, BUILDING_TYPE
+from .cell import Cell
 
 class Action:
 

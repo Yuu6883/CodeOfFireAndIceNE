@@ -10,7 +10,7 @@ PLAYER_COUNT = 2
 VOID = -2
 NEUTRAL = -1
 
-UP = 1
+UP = 0
 RIGHT = 1
 DOWN = 2
 LEFT = 3

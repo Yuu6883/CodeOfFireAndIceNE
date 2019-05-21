@@ -1,5 +1,5 @@
-from constants import BUILDING_TYPE
-from entity import Entity
+from .constants import BUILDING_TYPE
+from .entity import Entity
 
 
 class Building(Entity):
@@ -20,7 +20,8 @@ class Building(Entity):
     def dispose(self):
         pass
 
-    def convert_type(self, s: str):
+    @staticmethod
+    def convert_type(s: str):
         if s == "MINE":
             return BUILDING_TYPE.MINE
         return BUILDING_TYPE.TOWER

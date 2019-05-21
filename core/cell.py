@@ -1,5 +1,5 @@
-from entity import Entity
-from constants import CAPTURE_LEVEL, MAX_LEVEL, BUILDING_TYPE
+from .entity import Entity
+from .constants import CAPTURE_LEVEL, MAX_LEVEL, BUILDING_TYPE
 from typing import List
 
 
@@ -77,7 +77,7 @@ class Cell(Entity):
             return True
 
         for neighbor in self.__neighbours:
-            if not neighbor and neighbor.get_owner() != self.get_owner():
+            if not neighbor or neighbor.get_owner() != self.get_owner():
                 continue
             
             building = neighbor.get_building()
@@ -88,6 +88,7 @@ class Cell(Entity):
     def is_playable(self, player_id: int):
         if self.get_owner() == player_id and self.is_active():
             return True
+        print(self.__neighbours)
         for neighbor in self.__neighbours:
             if neighbor != None and neighbor.get_owner() == player_id and neighbor.is_active():
                 return True
@@ -98,3 +99,6 @@ class Cell(Entity):
             if neighbor != None and neighbor.get_x() == cell.get_x() and neighbor.get_y() == cell.get_y():
                 return True
         return False
+
+    def __repr__(self):
+        return f'[{self.get_x()}, {self.get_y()}, Owner: {self.get_owner()}]'
