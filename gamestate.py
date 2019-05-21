@@ -276,7 +276,7 @@ class GameState:
     def init_turn(self, player_id: int):
         self.compute_active_cells(player_id)
         self.kill_separated_units(player_id)
-        self.compute_income(player_id)
+        self.compute_all_income()
         self.compute_gold(player_id)
         if self.__player_golds[player_id] < 0:
             self.negative_gold_wipeout(player_id)
@@ -332,10 +332,14 @@ class GameState:
                 update_income += MINE_INCOME
 
         for unit in self.__units.values():
-            if unit.get_owner() == player_id and unit.is_alive():
+            if unit.get_owner() == player_id and unit.is_alive() and unit.get_cell().is_active():
                 update_income -= UNIT_UPKEEP[unit.get_level()]
 
         self.__player_income[player_id] = update_income
+
+    def compute_all_income(self):
+        for player_id in range(PLAYER_COUNT):
+            self.compute_income(player_id)
 
     def compute_gold(self, player_id: int):
         self.__player_golds[player_id] += self.__player_income[player_id]
