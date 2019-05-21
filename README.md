@@ -10,6 +10,8 @@ Open source AI for CodeOfFireAndIce challenge on codingame.com
 
 ## Done Features
 1. Game logic implemented in python so that I can use tensorflow library later for training purpose (also because I prefer Python than Java). Original game logic is available [here](https://github.com/Azkellas/a-code-of-ice-and-fire)
+2. GUI implemented with [pygame](https://www.pygame.org)
+![Demo](https://i.imgur.com/vzP1E7j.gif)
 
 ## TODO
 1. Define inputs and outputs for NN
