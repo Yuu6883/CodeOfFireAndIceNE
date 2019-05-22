@@ -74,7 +74,8 @@ class GUIEngine(Engine):
                 if owner == VOID or owner == NEUTRAL:
                     if cell.is_mine():
                         icon = "mine_cart" if cell.get_building() else "mine"
-                    continue
+                    else:
+                        continue
 
                 prefix = ["fire", "ice"][owner]
                 if cell.get_unit():

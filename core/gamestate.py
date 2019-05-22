@@ -175,6 +175,8 @@ class GameState:
                     self.get_sym_cell(node1.get_x(), y).set_owner(NEUTRAL)
 
     def generate_map(self, league: LEAGUE):
+
+        print("Generating map with leange: " + league.name)
         
         for x in range(MAP_WIDTH):
             for y in range(MAP_HEIGHT):
@@ -237,6 +239,7 @@ class GameState:
 
                 self.get_cell(rand_x, rand_y).set_mine()
                 self.get_sym_cell(rand_x, rand_y).set_mine()
+                # print(f'Generated mine at [{rand_x}, {rand_y}]')
 
         self.compute_neighbors()
         self.__path_find.init(self.__map)

@@ -41,9 +41,9 @@ class BUILDING_TYPE(Enum):
 
 class LEAGUE(Enum):
     WOOD3 = 0
-    WOOD2 = 0
-    WOOD1 = 0
-    BRONZE = 0
+    WOOD2 = 1
+    WOOD1 = 2
+    BRONZE = 3
 
 
 MOVETRAIN_PATTERN = re.compile("^(MOVE|TRAIN) ([0-9]*) ([0-9]*) ([0-9]*)$")

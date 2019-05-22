@@ -44,7 +44,7 @@ class Engine:
         if len(self.__players) != PLAYER_COUNT:
             return print("Not enough player to initiate the game")
         self.__started = True
-        self.__state = GameState(self.seed, LEAGUE.WOOD3)
+        self.__state = GameState(self.seed, self.__league)
         self.__state.generate_map(self.__league)
         self.__state.create_hq(PLAYER_COUNT)
 
