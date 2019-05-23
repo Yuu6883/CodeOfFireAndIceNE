@@ -11,11 +11,11 @@ import time
 
 class Engine:
 
-    def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, debug = False, strict = False, seed = random.randint(0, 2 * 31)):
+    def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, debug = False, strict = False, seed = None):
         self.__players = []
         self.current_player: Player = None
         self.__state: GameState = None
-        self.__league: LEAGUE = league
+        self.__league: LEAGUE = None
         self.__started = False
         self.__turns = 0
         self.__actions = []
@@ -25,7 +25,8 @@ class Engine:
         self.__debug = debug
         self.__strict = strict
         self.__error_log = []
-        self.seed = seed
+        self.seed = seed if seed else random.randint(0, 2 * 31)
+        self.set_league(league)
 
     def get_map(self):
         return self.__state.get_map()
@@ -34,11 +35,14 @@ class Engine:
         if self.__started:
             return print("Can't change league when the game already started")
         self.__league = league
+        [p.set_league(self.__league) for p in self.__players]
 
-    def add_player(self, player: Player):
+    def add_player(self, player_class):
         if len(self.__players) >= PLAYER_COUNT:
             return print(f'Current player capacity is {PLAYER_COUNT}')
-        self.__players.append(player)
+        new_player = player_class(len(self.__players))
+        new_player.set_league(self.__league)
+        self.__players.append(new_player)
 
     def start(self):
         if len(self.__players) != PLAYER_COUNT:
