@@ -70,12 +70,13 @@ class GUIEngine(Engine):
                     OFFSET[1] + cell.get_y() * (TILE_LENGTH + GAP)))
 
                 icon = ""
+                building_icon = ""
 
-                if owner == VOID or owner == NEUTRAL:
-                    if cell.is_mine():
-                        icon = "mine_cart" if cell.get_building() else "mine"
-                    else:
-                        continue
+                
+                if cell.is_mine():
+                    building_icon = "mine_cart" if cell.get_building() else "mine"
+                elif owner == VOID or owner == NEUTRAL:
+                    continue
 
                 prefix = ["fire", "ice"][owner]
                 if cell.get_unit():
@@ -87,11 +88,15 @@ class GUIEngine(Engine):
                     if building.get_type() == BUILDING_TYPE.HQ:
                         icon = f'{prefix}_hq'
                     elif building.get_type() == BUILDING_TYPE.MINE:
-                        icon = f'{prefix}_mine'
+                        building_icon = f'{prefix}_mine'
                     elif building.get_type() == BUILDING_TYPE.TOWER:
-                        icon = f'{prefix}_tower'
+                        building_icon = f'{prefix}_tower'
                     else:
                         print("kms x2")
+
+                if building_icon:
+                    self.screen.blit(self.images[building_icon], (OFFSET[0] + cell.get_x() * (TILE_LENGTH + GAP),
+                        OFFSET[1] + cell.get_y() * (TILE_LENGTH + GAP)))
 
                 if icon:
                     self.screen.blit(self.images[icon], (OFFSET[0] + cell.get_x() * (TILE_LENGTH + GAP),
