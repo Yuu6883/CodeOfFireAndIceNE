@@ -7,6 +7,7 @@ class Player:
         self.message_queue = []
         self.transpose = False
         self.print_turn = print_turn
+        self.__league = None
 
     def get_index(self):
         return self.__index
@@ -39,3 +40,9 @@ class Player:
 
     def __str__(self):
         return type(self).__name__
+
+    def set_league(self, league):
+        self.__league = league
+
+    def get_league(self, league):
+        return self.__league
