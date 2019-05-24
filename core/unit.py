@@ -43,3 +43,9 @@ class Unit(Entity):
     def dispose(self):
         self.__cell.set_unit(None)
         self.__alive = False
+
+    def __repr__(self):
+        return f'Level {self.__level} at {self.__cell}'
+
+    def __str__(self):
+        return repr(self)

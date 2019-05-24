@@ -1,0 +1,47 @@
+We will use evolution for the nn instead of using gradient
+
+The bot will have 2 - 4 nn attached (depends on which league):
+    1 for training units
+    2 for moving units
+    3 for building mine
+    4 for building tower
+
+Training agent:
+    Input dimension: 16
+    Inputs: [8 surrounding cell, x, y, player_income, player_gold, player_uni_num, enemy_income, enemy_gold, enemy_unit_num]
+    Cell encoding: VOID -> -1, NEUTRAL -> 0, 
+        Enemy_tower -> -0.5, Enemy_mine -> -0.25 Enemy_unit -> -1 / level, Enemy_active -> -0.1, Enemy_inactive -> -0.05
+        Player_tower -> 0.5, Player_mine -> 0.25, Player_unit -> 1 / level, Player_active -> 0.1, Player_inactive?? -> 0.05
+    Output: probability?
+    Output interpretation:
+        [0 - 0.5] -> do not train
+        [0.5 - 0.7] -> train level 1 
+        [0.7 - 0.8] -> train level 2
+        [0.8 - 1] -> train level 3
+        (for WOOD3 [0.5 - 1] -> train level 1)
+
+Moving agent:
+    Input dimension: 11
+    Inputs: [8 surrounding cell, x, y, dir]
+    Cell encoding: same as training agent
+    Direction encoding: up -> 1, down -> -1, left -> 0.5, right -> -0.5, stay -> 0
+    Output: preference on the direction
+
+Mine building agent:
+    Input dimentsion: 13
+    Inputs: [8 surrounding cell, x, y, player_mine_number, player_gold, player_income]
+    Cell encoding: same as training agent
+    Output: probability?
+    Output interpretation:
+        [0 - 1] -> build mine
+        [-1 - 0] -> do not build mine
+
+Tower building agent:
+    Input dimension: 13
+    Inputs: [8 surrounding cell, x, y, player_tower_number, player_gold, player_income]
+    Cell encoding: same as training agent
+    Output: probability?
+    Output interpretation:
+        [0 - 1] -> build tower
+        [-1 - 0] -> do not build tower
+    

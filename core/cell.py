@@ -1,5 +1,5 @@
 from .entity import Entity
-from .constants import CAPTURE_LEVEL, MAX_LEVEL, BUILDING_TYPE
+from .constants import CAPTURE_LEVEL, MAX_LEVEL, BUILDING_TYPE, VOID
 from typing import List
 
 
@@ -51,10 +51,18 @@ class Cell(Entity):
     def set_mine(self):
         self.__mine_spot = True
 
+    def clear(self):
+        self.__mine_spot = False
+        self.__unit = None
+        self.__building = None
+
     def is_free(self):
         return self.__unit is None and self.__building is None
 
     def is_capturable(self, player_id: int, level: int):
+
+        if self.get_owner() == VOID:
+            return False
 
         if self.get_owner() != player_id and self.is_active() and self.is_protected() and level < CAPTURE_LEVEL:
             return False

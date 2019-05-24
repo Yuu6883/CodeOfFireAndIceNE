@@ -12,13 +12,20 @@ GAP = 2
 
 class GUIEngine(Engine):
 
+    instance = None
+
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        pygame.init()
-        pygame.font.init()
-        self.screen = pygame.display.set_mode(DISPLAY_SIZE)
-        pygame.display.set_caption("A Code of Fire and Ice")
-        self.load_images()
+        if GUIEngine.instance:
+            print("Only one GUI instance is available")
+            exit(1)
+        else:
+            super().__init__(*args, **kwargs)
+            pygame.init()
+            pygame.font.init()
+            self.screen = pygame.display.set_mode(DISPLAY_SIZE)
+            pygame.display.set_caption("A Code of Fire and Ice")
+            self.load_images()
+            GUIEngine.instance = self
 
     def load_images(self):
         self.images = {filename.replace(".png", "").replace(".jpg", ""): pygame.image.load("./core/images/" + filename) \
@@ -37,6 +44,8 @@ class GUIEngine(Engine):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                self.restart()
 
         # Draw background
         self.screen.blit(self.background, (0, 0))
@@ -102,7 +111,7 @@ class GUIEngine(Engine):
                     self.screen.blit(self.images[icon], (OFFSET[0] + cell.get_x() * (TILE_LENGTH + GAP),
                         OFFSET[1] + cell.get_y() * (TILE_LENGTH + GAP)))
 
-        p1, p2 = str(self.get_player(0)), str(self.get_player(1))
+        p1, p2 = str(self.get_player(0))[:5], str(self.get_player(1))[:5]
         income1, income2 = self.get_income(0), self.get_income(1)
         gold1, gold2 = self.get_gold(0), self.get_gold(1)
         turns = self.get_turns()

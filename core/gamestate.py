@@ -176,7 +176,7 @@ class GameState:
 
     def generate_map(self, league: LEAGUE):
 
-        print("Generating map with leange: " + league.name)
+        # print("Generating map with leange: " + league.name)
         
         for x in range(MAP_WIDTH):
             for y in range(MAP_HEIGHT):
@@ -410,14 +410,11 @@ class GameState:
                         data = 'o'
                     else:
                         data = 'x'
-                    if self.__map[x][y]:
+                    if self.__map[x][y].is_active():
                         data = data.upper()
                 line += data
             player.send_input_line(line)
-
-    def send_mines(self, player: Player):
-        self.send_map(player)
-
+            
     def send_units(self, player: Player):
         player.send_input_line(str(len(self.__units.keys())))
 

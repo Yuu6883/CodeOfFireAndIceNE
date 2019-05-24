@@ -8,10 +8,11 @@ from .unit import Unit
 import random
 import time
 
-
 class Engine:
 
-    def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, debug = False, strict = False, seed = None):
+    def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, \
+        debug = False, strict = False, seed = None, auto_restart=False,\
+            silence=False):
         self.__players = []
         self.current_player: Player = None
         self.__state: GameState = None
@@ -27,33 +28,70 @@ class Engine:
         self.__error_log = []
         self.seed = seed if seed else random.randint(0, 2 * 31)
         self.set_league(league)
+        self.__auto_restart = auto_restart
+        self.__silence = silence
+
+    def restart(self, new_seed=True):
+        if self.__started:
+            self.print("Force restarting")
+        [p.reset() for p in self.__players]
+
+        self.__started = True
+        self.__gameover = False
+        self.__turns = 0
+        self.__actions.clear()
+        self.__move_count = 0
+        random.seed(time.thread_time_ns())
+        self.__state = GameState(random.randint(0, 2** 31) if new_seed else self.seed \
+            , self.__league)
+        self.__state.generate_map(self.__league)
+        self.__state.create_hq(PLAYER_COUNT)
+
+        self.current_player = random.choice(self.__players)
+        self.send_init_messages()
+        
+        while not self.__gameover:
+            self.gameloop()
 
     def get_map(self):
         return self.__state.get_map()
     
     def set_league(self, league: LEAGUE):
         if self.__started:
-            return print("Can't change league when the game already started")
+            return self.print("Can't change league when the game already started")
         self.__league = league
         [p.set_league(self.__league) for p in self.__players]
 
-    def add_player(self, player_class):
+    def add_player(self, player_class, *args, **kwargs):
         if len(self.__players) >= PLAYER_COUNT:
-            return print(f'Current player capacity is {PLAYER_COUNT}')
-        new_player = player_class(len(self.__players))
+            return self.print(f'Current player capacity is {PLAYER_COUNT}')
+        new_player = player_class(len(self.__players), *args, **kwargs)
         new_player.set_league(self.__league)
         self.__players.append(new_player)
+        return new_player
+
+    def set_player(self, players):
+        assert len(players) == 2
+        assert isinstance(players[0], Player)
+        assert isinstance(players[1], Player)
+        self.__players = players
+
+    def get_players(self):
+        return self.__players
 
     def start(self):
         if len(self.__players) != PLAYER_COUNT:
-            return print("Not enough player to initiate the game")
-        self.__started = True
-        self.__state = GameState(self.seed, self.__league)
-        self.__state.generate_map(self.__league)
-        self.__state.create_hq(PLAYER_COUNT)
+            return self.print("Not enough player to initiate the game")
+        self.restart(new_seed=False)
 
-        self.current_player = random.choice(self.__players)
-        self.gameloop()
+    def send_init_messages(self):
+        for player in self.__players:
+            player.send_init_input(self.__state.get_mine_spots())
+            for row in self.__state.get_map():
+                for cell in row:
+                    if cell.is_mine():
+                        player.send_init_input(f'{cell.get_x()} {cell.get_y()}')
+            player.init()
 
     def get_turns(self):
         return self.__turns
@@ -68,7 +106,10 @@ class Engine:
         return self.__state.get_gold(index)
 
     def game_over(self):
-        pass
+        self.__gameover= True
+        self.__started = False
+        if self.__auto_restart:
+            self.restart()
 
     def gameloop(self):
 
@@ -78,24 +119,32 @@ class Engine:
 
         if self.__turns // 2 >= MAX_TURNS:
             scores = self.__state.get_scores()
-            print(f'Scores [ {self.__players[0]}: {scores[0]} ---- {self.__players[1]}: {scores[1]} ]')
+            self.print(f'Scores [ {self.__players[0]}: {scores[0]} ---- {self.__players[1]}: {scores[1]} ]')
             if scores[0] > scores[1]:
                 self.kill_player(self.__players[1])
             elif scores[1] > scores[0]:
                 self.kill_player(self.__players[0])
             else:
-                print("Wow a tie")
+                self.print("Wow a tie")
+                self.__gameover = True
+                self.game_over()
+            self.__players[0].add_score(scores[0])
+            self.__players[1].add_score(scores[1])
             return
         success = 0
         self.__state.init_turn(self.current_player.get_index())
         self.__state.send_state(self.current_player)
-        self.current_player.update()
+        try:
+            self.current_player.update()
+        except Exception as e:
+            self.print(f'{self.current_player} crashed at turn {self.__turns // 2}')
+            self.print(e)
         try:
             self.parse_action()
             success = sum([self.execute_action(action) for action in self.__actions])
         except Exception as e:
-            print("Caught Exception while executing an action:")
-            print(e)
+            self.print("Caught Exception while executing an action:")
+            self.print(e)
             # raise e
             self.kill_player(self.current_player)
         if success != len(self.__actions) and not self.__debug and not self.__strict:
@@ -108,13 +157,12 @@ class Engine:
                     % len(self.__players)]
         if self.__sleep > 0:
             time.sleep(self.__sleep)
-
-        self.gameloop()
                     
     def kill_player(self, player: Player):
         player.lose()
         [p.win() for p in self.__players if not p is player]
         self.__gameover = True
+        self.game_over()
 
     def parse_action(self):
         # Referee.java readInput
@@ -131,7 +179,7 @@ class Engine:
             if not self.match_move_train(self.current_player, action_str) and \
                 not self.match_build(self.current_player, action_str):
                 # self.throw(f'Message not matching any regex {action_str}')
-                print("Invalid Input: " + action_str)
+                self.print("Invalid Input: " + action_str)
                 
     def match_move_train(self, player: Player, msg: str):
         if not MOVETRAIN_PATTERN.match(msg):
@@ -219,7 +267,8 @@ class Engine:
         unit_id: int = action.get_unit_id()
         unit: Unit = self.__state.get_unit(unit_id)
 
-        if not action.get_cell().is_capturable(action.get_player(), unit.get_level()):
+        if not action.get_cell().is_capturable(action.get_player(), unit.get_level()) and \
+            abs(unit.get_x() - action.get_cell().get_x()) + abs(unit.get_y() - action.get_cell().get_y()) == 1:
             return self.throw("Not capturable")
 
         next_cell = self.__state.get_next_cell(unit, action.get_cell())
@@ -274,10 +323,10 @@ class Engine:
                 self.kill_player(self.__players[hq.get_owner()])
 
     def log_errors(self):
-        print("\n".join(self.__error_log))
+        self.print("\n".join(self.__error_log))
 
     def clear_errors(self):
-        print(f'{len(self.__error_log)} error logs cleared')
+        self.print(f'{len(self.__error_log)} error logs cleared')
         self.__error_log.clear()
 
     def throw(self, msg: str):
@@ -290,4 +339,8 @@ class Engine:
 
     def debug(self, msg: str):
         if self.__debug:
-            print(msg)
+            self.print(msg)
+
+    def print(self, *args):
+        if not self.__silence:
+            print(*args)
