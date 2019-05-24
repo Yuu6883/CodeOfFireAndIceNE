@@ -346,7 +346,7 @@ class Engine:
                 loser_index = hq.get_owner() 
                 winner_index = hq.get_cell().get_owner()
                 scores = self.__state.get_scores()
-                winner_score = scores[winner_index] + round(math.sqrt((MAX_TURNS - self.__turns) // 2)) * 100
+                winner_score = scores[winner_index] + round(math.sqrt(max((MAX_TURNS - self.__turns) // 2), 0)) * 100
                 loser_score = scores[loser_index]
 
                 self.__players[winner_index].add_score(winner_score)

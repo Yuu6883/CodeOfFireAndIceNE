@@ -116,7 +116,7 @@ class GUIEngine(Engine):
         gold1, gold2 = self.get_gold(0), self.get_gold(1)
         turns = self.get_turns()
 
-        pos_or_neg = lambda x: "+" + str(x) if x >= 0 else "-" + str(x)
+        pos_or_neg = lambda x: "+" + str(x) if x >= 0 else str(x)
         income1 = pos_or_neg(income1)
         income2 = pos_or_neg(income2)
 

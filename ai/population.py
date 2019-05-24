@@ -11,26 +11,31 @@ import shutil
 
 class Population:
 
-    def __init__(self, size=128, selection_size=16, visualize=False, game_number=5, folder="generations", ideal_generation=1000, idle_limit=10):
+    def __init__(self, size=128, selection_size=16, visualize=False, game_number=5, folder="generations", \
+        ideal_generation=1000, idle_limit=10, showcase=False, league:LEAGUE=LEAGUE.WOOD3):
         
         assert size > selection_size
         
         sess = tf.InteractiveSession()
+        if showcase:
+            visualize=True
+            idle_limit = 100
         self.generation = 0
         self.size = size
         self.selection_size = selection_size
         self.folder = folder
         self.ideal_generation = ideal_generation
+        self.showcase = showcase
 
         if not os.path.exists(f'./ai/{folder}'):
             os.mkdir(f'./ai/{folder}')
 
         if visualize:
             from core.gui import GUIEngine
-            self.engine = GUIEngine(league=LEAGUE.WOOD3, silence=True, idle_limit=idle_limit)
+            self.engine = GUIEngine(league=league, silence=(not showcase), idle_limit=idle_limit)
         else:
             from core.engine import Engine
-            self.engine = Engine(league=LEAGUE.WOOD3, silence=True, idle_limit=idle_limit)
+            self.engine = Engine(league=league, silence=(not showcase), idle_limit=idle_limit)
             
         self.bots = [self.engine.add_player(AIBot, sess, randomize=True),\
             self.engine.add_player(AIBot, sess, randomize=True)]
@@ -61,10 +66,22 @@ class Population:
         if new_pop:
             self.simulate(randomize=True)
             self.natural_selection()
-    
-        while self.generation < self.ideal_generation:
-            self.simulate()
-            self.natural_selection()
+
+        if self.showcase:
+            index = 0
+            while True:
+                data1, data2 = self.generation_data[index:index+PLAYER_COUNT]
+                p1, p2 = self.engine.get_players()
+                p1.from_data(data1)
+                p2.from_data(data2)
+                self.engine.restart(new_seed=True)
+                index += 2
+                index = index % len(self.generation_data)
+
+        else:
+            while self.generation < self.ideal_generation:
+                self.simulate()
+                self.natural_selection()
         
     def simulate(self, randomize=False):
         
@@ -109,6 +126,8 @@ class Population:
         if write:
             for index in range(len(best)):
                 obj = best[index]
+                if not os.path.exists(f'./ai/{self.folder}'):
+                    os.mkdir(f'./ai/{self.folder}')
                 if not os.path.exists(f'./ai/{self.folder}/gen{self.generation}'):
                     os.mkdir(f'./ai/{self.folder}/gen{self.generation}')
                 with open(f'./ai/{self.folder}/gen{self.generation}/parent{index+1}.nnet', "wb") as f:
