@@ -22,6 +22,25 @@ CELL_ENCODE = {
 ME = 0
 ENEMY = 1
 
+class Data:
+    def __init__(self, bot = None):
+        if bot:
+            self.training_weights = bot.training_agent.get_weights().tolist()
+            self.moving_weights = bot.moving_agent.get_weights().tolist()
+            self.wins = bot.win_num
+            self.lost = bot.lost_num
+            self.scores = bot.scores.copy()
+            self.average_score = sum(self.scores) / len(self.scores) if len(self.scores) else 0
+
+    def get_score(self):
+        return self.average_score
+
+    def __repr__(self):
+        return f'Data[win:{self.wins}, lose:{self.lost}]'
+
+    def __str__(self):
+        return repr(self)
+
 def update_cell(cell: Cell, char: str):
     if char == "X":
         cell.set_active()
@@ -324,6 +343,12 @@ class AIBot(Player):
     def get_data(self):
         return Data(bot=self)
 
+    def from_data(self, data: Data):
+        self.reset()
+        self.reset_stats()
+        self.training_agent.set_weights(data.training_weights)
+        self.moving_agent.set_weights(data.moving_weights)
+
     def randomize(self):
         self.training_agent.randomize()
         self.moving_agent.randomize()
@@ -332,22 +357,3 @@ class AIBot(Player):
         for row in self.map:
             for cell in row:
                 cell.clear()
-
-class Data:
-    def __init__(self, bot: AIBot = None):
-        if bot:
-            self.training_weights = bot.training_agent.get_weights().tolist()
-            self.moving_weights = bot.moving_agent.get_weights().tolist()
-            self.wins = bot.win_num
-            self.lost = bot.lost_num
-            self.scores = bot.scores.copy()
-            self.average_score = sum(self.scores) / len(self.scores) if len(self.scores) else 0
-
-    def get_score(self):
-        return self.average_score
-
-    def __repr__(self):
-        return f'Data[win:{self.wins}, lose:{self.lost}]'
-
-    def __str__(self):
-        return repr(self)

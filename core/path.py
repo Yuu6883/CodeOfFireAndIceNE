@@ -14,8 +14,9 @@ class Path:
     def init(self, grid: List[List[Cell]]):
 
         # Init
-        self.__distances = [[(0 if i == j else self.__INFINITY) for j in range(self.__MAP_SIZE)] \
-             for i in range(self.__MAP_SIZE)]
+        if not self.__distances:
+            self.__distances = [[(0 if i == j else self.__INFINITY) for j in range(self.__MAP_SIZE)] \
+                for i in range(self.__MAP_SIZE)]
 
         # Distance to neighbor = 1
         for row in grid:

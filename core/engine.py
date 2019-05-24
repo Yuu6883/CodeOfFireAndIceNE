@@ -7,12 +7,13 @@ from .building import Building
 from .unit import Unit
 import random
 import time
+import math
 
 class Engine:
 
     def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, \
         debug = False, strict = False, seed = None, auto_restart=False,\
-            silence=False):
+            silence=False, idle_limit = 5):
         self.__players = []
         self.current_player: Player = None
         self.__state: GameState = None
@@ -30,6 +31,7 @@ class Engine:
         self.set_league(league)
         self.__auto_restart = auto_restart
         self.__silence = silence
+        self.__idle_limit = idle_limit
 
     def restart(self, new_seed=True):
         if self.__started:
@@ -41,10 +43,14 @@ class Engine:
         self.__turns = 0
         self.__actions.clear()
         self.__move_count = 0
+        self.__idle_count = [0, 0]
         random.seed(time.thread_time_ns())
-        self.__state = GameState(random.randint(0, 2** 31) if new_seed else self.seed \
-            , self.__league)
-        self.__state.generate_map(self.__league)
+        if not self.__state:
+            self.__state = GameState(random.randint(0, 2** 31) if new_seed else self.seed \
+                , self.__league)
+            self.__state.generate_map(self.__league)
+        else:
+            self.__state.reset()
         self.__state.create_hq(PLAYER_COUNT)
 
         self.current_player = random.choice(self.__players)
@@ -142,6 +148,11 @@ class Engine:
         try:
             self.parse_action()
             success = sum([self.execute_action(action) for action in self.__actions])
+            if not success:
+                self.__idle_count[self.current_player.get_index()] += 1
+            else:
+                self.__idle_count[self.current_player.get_index()] = 0
+            self.check_idle()
         except Exception as e:
             self.print("Caught Exception while executing an action:")
             self.print(e)
@@ -157,6 +168,18 @@ class Engine:
                     % len(self.__players)]
         if self.__sleep > 0:
             time.sleep(self.__sleep)
+
+    def check_idle(self):
+        for index in range(len(self.__idle_count)):
+            idle = self.__idle_count[index]
+            if idle >= self.__idle_limit:
+                scores = self.__state.get_scores()
+                for i in range(len(scores)):
+                    if i != index:
+                        self.__players[i].add_score(scores[i] + 200)
+                    else:
+                        self.__players[i].add_score(scores[i] - 200)
+                self.kill_player(self.__players[index])
                     
     def kill_player(self, player: Player):
         player.lose()
@@ -320,7 +343,16 @@ class Engine:
     def check_hq_capture(self):
         for hq in self.__state.get_HQs():
             if hq.get_cell().get_owner() != hq.get_owner():
-                self.kill_player(self.__players[hq.get_owner()])
+                loser_index = hq.get_owner() 
+                winner_index = hq.get_cell().get_owner()
+                scores = self.__state.get_scores()
+                winner_score = scores[winner_index] + round(math.sqrt((MAX_TURNS - self.__turns) // 2)) * 100
+                loser_score = scores[loser_index]
+
+                self.__players[winner_index].add_score(winner_score)
+                self.__players[loser_index].add_score(loser_score)
+                
+                self.kill_player(self.__players[loser_index])
 
     def log_errors(self):
         self.print("\n".join(self.__error_log))

@@ -24,6 +24,7 @@ class GameState:
 
         self.__seed = seed
         self.__path_find = Path()
+        self.__league = league
 
         random.seed(seed)
 
@@ -60,6 +61,24 @@ class GameState:
 
     def is_inside(self, x: int, y: int) -> bool:
         return self.in_bound(x, y) and self.__map[x][y].get_owner() != VOID
+
+    def reset(self):
+        for row in self.__map:
+            for cell in row:
+                cell.clear()
+        self.__player_golds = [2 * UNIT_COST[1]] * PLAYER_COUNT
+        self.__player_income = [1] * PLAYER_COUNT
+        if self.__league == LEAGUE.WOOD1 or self.__league == LEAGUE.BRONZE:
+            self.__mines = 2 * round((random.randint(0, NUMBER_MINESPOTS_MAX - NUMBER_MINESPOTS_MIN)\
+                + NUMBER_MINESPOTS_MIN) / 2)
+        else:
+            self.__mines = 0
+
+        self.__units.clear()
+        self.__buildings.clear()
+        self.__HQs.clear()
+
+        self.generate_map(self.__league)
 
     def compute_neighbors(self):
         for x in range(MAP_WIDTH):
@@ -250,7 +269,7 @@ class GameState:
 
         hq0 = Building(self.get_cell(0, 0), 0, BUILDING_TYPE.HQ)
         hq1 = Building(self.get_cell(MAP_WIDTH - 1, MAP_HEIGHT - 1), 1, BUILDING_TYPE.HQ)
-        self.__HQs = hq0, hq1
+        self.__HQs = [hq0, hq1]
         self.get_cell(0, 0).set_owner(0)
         self.get_cell(MAP_WIDTH - 1, MAP_HEIGHT - 1).set_owner(1)
         self.add_building(hq0)
