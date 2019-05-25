@@ -1,6 +1,6 @@
 from core.player import Player
 from core.constants import MAP_HEIGHT, MAP_WIDTH, VOID, NEUTRAL,\
-    UP, LEFT, RIGHT, DOWN, CAPTURE_LEVEL, LEAGUE, DIRECTIONS, STAY
+    UP, LEFT, RIGHT, DOWN, CAPTURE_LEVEL, LEAGUE, DIRECTIONS, STAY, MAX_LEVEL
 from core.cell import Cell
 from core.building import Building, BUILDING_TYPE
 from core.unit import Unit
@@ -8,7 +8,8 @@ from core.unit import Unit
 from ai.nn.training_nn import TrainingAgent
 from ai.nn.moving_nn import MovingAgent
 
-import math
+import math, tensorflow as tf
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 CELL_ENCODE = {
     "x": -0.05,
@@ -25,18 +26,25 @@ ENEMY = 1
 class Data:
     def __init__(self, bot = None):
         if bot:
+            self.uid = str(bot.uid)
             self.training_weights = bot.training_agent.get_weights().tolist()
             self.moving_weights = bot.moving_agent.get_weights().tolist()
             self.wins = bot.win_num
             self.lost = bot.lost_num
             self.scores = bot.scores.copy()
-            self.average_score = sum(self.scores) / len(self.scores) if len(self.scores) else 0
+            self.best = max(*self.scores, 1)
+            self.average_score = max([sum(self.scores) / len(self.scores) if len(self.scores) else 0, 1])
+        else:
+            self.average_score = 1
+            self.best = 1
 
     def get_score(self):
-        return self.average_score
+        if self.best < 0 or self.average_score < 0:
+            return 0
+        return self.average_score + self.best ** 2
 
     def __repr__(self):
-        return f'Data[win:{self.wins}, lose:{self.lost}]'
+        return f'Data#{self.uid}[best:{round(self.best)}, average:{round(self.average_score)}]'
 
     def __str__(self):
         return repr(self)
@@ -78,27 +86,27 @@ def decode(cell: Cell):
         raise KeyError()
 
 DIRECTION_ENCODE = [1, -0.5, -1, 0.5, 0]
+MAP_SIZE = MAP_HEIGHT * MAP_WIDTH
 
-def normalize(a: int, b: int):
-    l = math.sqrt(a ** 2 + b ** 2)
-    if not l:
-        return 1, 1
-    return a / l, b / l
+from math import tanh
 
 class AIBot(Player):
 
     ID = 0
 
-    def __init__(self, index: int, sess, randomize=False):
+    def __init__(self, index: int, randomize=False):
         super().__init__(index, print_turn=False)
-        self.training_agent = TrainingAgent(sess)
-        self.moving_agent = MovingAgent(sess)
+        self.training_agent: TrainingAgent = None
+        self.moving_agent: MovingAgent = None
         self.map = [[Cell(x, y) for y in range(MAP_HEIGHT)] for x in range(MAP_WIDTH)]
         self.my_units = {}
         self.enemy_unit_num = 0
         self.actions = []
         self.population = None
         self.id = AIBot.ID
+        self.uid = ""
+        self.randomize_onplay = randomize
+        self.sess = None
         AIBot.ID += 1
         # print(f'AIBot#{self.id} constructor called')
 
@@ -109,10 +117,18 @@ class AIBot(Player):
                 self.in_bound(x, y + 1) and self.map[x][y].set_neighbor(DOWN, self.map[x][y + 1])
                 self.in_bound(x + 1, y) and self.map[x][y].set_neighbor(RIGHT, self.map[x + 1][y])
                 self.in_bound(x - 1, y) and self.map[x][y].set_neighbor(LEFT, self.map[x - 1][y])
-        
-        if randomize:
-            self.training_agent.randomize()
-            self.moving_agent.randomize()
+
+    def activate(self):
+        self.sess = tf.Session()
+        if self.randomize_onplay:
+            self.randomize()
+            self.randomize_onplay = False
+
+    def deactivate(self):
+        self.sess.close()
+        self.sess = None
+        self.training_agent = None
+        self.moving_agent = None
 
     def get_message(self):
         if len(self.actions):
@@ -254,12 +270,13 @@ class AIBot(Player):
         return x >= 0 and x < MAP_WIDTH and y >= 0 and y < MAP_HEIGHT
 
     def train(self):
+        assert self.training_agent != None
         # Make TRAIN actions
-        my_unit, enemy_unit = normalize(len(self.my_units), self.enemy_unit_num)
+        my_unit, enemy_unit = len(self.my_units) / MAP_SIZE, self.enemy_unit_num / MAP_SIZE
 
-        my_income, enemy_income = normalize(self.income, self.opponent_income)
+        my_income, enemy_income = tanh(self.income / 5), tanh(self.opponent_income / 5)
 
-        my_gold, enemy_gold = normalize(self.gold, self.opponent_gold)
+        my_gold, enemy_gold = tanh(self.gold / 50), tanh(self.opponent_gold / 50)
 
         results = []
         for cell in self.get_trainable_cells():
@@ -296,16 +313,18 @@ class AIBot(Player):
         self.actions.append(f'TRAIN {level} {x} {y}')
 
     def move(self):
+        assert self.moving_agent != None
         # Make MOVE actions
         
         for unit_id in self.my_units:
             unit = self.my_units[unit_id]
+            level = unit.get_level() / MAX_LEVEL
             cell: Cell = unit.get_cell()
             x, y = cell.get_x(), cell.get_y()
 
             neighbors = self.get_neighbor_move_encoding(unit, cell)
 
-            result = [self.moving_agent.predict(neighbors + [x, y, DIRECTION_ENCODE[direction]]) \
+            result = [self.moving_agent.predict(neighbors + [level, x, y, DIRECTION_ENCODE[direction]]) \
                 for direction in DIRECTIONS]
 
             result = [i[0][0] for i in result]
@@ -333,23 +352,24 @@ class AIBot(Player):
 
     def on_gameover(self):
         self.clear_map()
-    
-    def __repr__(self):
-        return f'AIBot#{self.id} [Wins: {self.win_num}, Loses: {self.lost_num}]'
-
-    def __str__(self):
-        return repr(self)
 
     def get_data(self):
         return Data(bot=self)
 
     def from_data(self, data: Data):
+        self.uid = str(data.uid)
         self.reset()
         self.reset_stats()
+        self.training_agent = TrainingAgent(self.sess)
+        self.moving_agent = MovingAgent(self.sess)
         self.training_agent.set_weights(data.training_weights)
         self.moving_agent.set_weights(data.moving_weights)
 
     def randomize(self):
+        import random
+        self.uid = "".join([str(i) for i in random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=4)])
+        self.training_agent = TrainingAgent(self.sess)
+        self.moving_agent = MovingAgent(self.sess)
         self.training_agent.randomize()
         self.moving_agent.randomize()
 
@@ -357,3 +377,9 @@ class AIBot(Player):
         for row in self.map:
             for cell in row:
                 cell.clear()
+
+    def __str__(self):
+        return f'Bot{self.uid}'
+
+    def __repr__(self):
+        return str(self)

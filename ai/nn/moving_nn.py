@@ -11,13 +11,13 @@ class MovingAgent:
     ID = 0
 
     def __init__(self, sess):
-        self.layer = None
         self.sess = sess
+        self.layer = None
         self.uid = MovingAgent.ID
         MovingAgent.ID += 1
 
     def copy(self):
-        new_agent = MovingAgent(self.sess)
+        new_agent = MovingAgent()
         new_agent.layer = tf.identity(self.layer)
         return new_agent
 
@@ -32,25 +32,31 @@ class MovingAgent:
         self.build_layers()
 
     def build_layers(self):
-        self.layer = tf.nn.sigmoid(tf.matmul(x, self.h1) + self.b1)
-        self.layer = tf.nn.sigmoid(tf.matmul(self.layer, self.h2) + self.b2)
-        self.layer = tf.nn.sigmoid(tf.matmul(self.layer, self.h_out) + self.b_out)
+        self.layer = tf.nn.sigmoid(tf.add(tf.matmul(x, self.h1), self.b1))
+        self.layer = tf.nn.sigmoid(tf.add(tf.matmul(self.layer, self.h2), self.b2))
+        self.layer = tf.nn.sigmoid(tf.add(tf.matmul(self.layer, self.h_out), self.b_out))
         self.sess.run(tf.global_variables_initializer())
 
     def predict(self, array):
-        return self.layer.eval(feed_dict={x:[array]})
+        return self.layer.eval(feed_dict={x:[array]}, session=self.sess)
 
     def get_weights(self):
-        b1_weights = flatten(self.b1.eval())
-        b2_weights = flatten(self.b2.eval())
-        b_out_weights = flatten(self.b_out.eval())
-        h1_weights = flatten(self.h1.eval())
-        h2_weights = flatten(self.h2.eval())
-        h_out_weights = flatten(self.h_out.eval())
+        if not hasattr(self, "h1"):
+            self.randomize()
+        with self.sess.as_default():
+            b1_weights = flatten(self.b1.eval())
+            b2_weights = flatten(self.b2.eval())
+            b_out_weights = flatten(self.b_out.eval())
+            h1_weights = flatten(self.h1.eval())
+            h2_weights = flatten(self.h2.eval())
+            h_out_weights = flatten(self.h_out.eval())
+
         return np.concatenate((b1_weights, b2_weights, b_out_weights,
             h1_weights, h2_weights, h_out_weights))
 
     def set_weights(self, weights: list):
+        if not hasattr(self, "h1"):
+            self.randomize()
         # Read weights
         offset = 0
         b1_weights = weights[:MOVING_HLAYER1]

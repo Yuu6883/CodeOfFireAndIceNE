@@ -32,6 +32,7 @@ class Engine:
         self.__auto_restart = auto_restart
         self.__silence = silence
         self.__idle_limit = idle_limit
+        self.__result = ""
 
     def restart(self, new_seed=True):
         if self.__started:
@@ -117,6 +118,15 @@ class Engine:
         if self.__auto_restart:
             self.restart()
 
+    def get_result(self):
+        return self.__result
+
+    def activate_players(self):
+        [p.activate() for p in self.__players]
+
+    def deactivate_players(self):
+        [p.deactivate() for p in self.__players]
+
     def gameloop(self):
 
         if self.__gameover:
@@ -125,13 +135,16 @@ class Engine:
 
         if self.__turns // 2 >= MAX_TURNS:
             scores = self.__state.get_scores()
-            self.print(f'Scores [ {self.__players[0]}: {scores[0]} ---- {self.__players[1]}: {scores[1]} ]')
+            self.print(f'Scores [ {self.__players[0]}: {scores[0]} --- {self.__players[1]}: {scores[1]} ]')
             if scores[0] > scores[1]:
+                self.__result = f'{self.__players[0]} [{scores[0]} --- {scores[1]}] {self.__players[1]}'
                 self.kill_player(self.__players[1])
             elif scores[1] > scores[0]:
+                self.__result = f'{self.__players[0]} [{scores[0]} --- {scores[1]}] {self.__players[1]}'
                 self.kill_player(self.__players[0])
             else:
                 self.print("Wow a tie")
+                self.__result = f'Tie [{scores[0]} --- {scores[1]}]'
                 self.__gameover = True
                 self.game_over()
             self.__players[0].add_score(scores[0])
@@ -145,6 +158,7 @@ class Engine:
         except Exception as e:
             self.print(f'{self.current_player} crashed at turn {self.__turns // 2}')
             self.print(e)
+            # raise e
         try:
             self.parse_action()
             success = sum([self.execute_action(action) for action in self.__actions])
@@ -156,7 +170,12 @@ class Engine:
         except Exception as e:
             self.print("Caught Exception while executing an action:")
             self.print(e)
-            # raise e
+            scores = self.__state.get_scores()
+            for player in self.__players:
+                if self.current_player is player:
+                    player.add_score(scores[player.get_index()] - 100)
+                else:
+                    player.add_score(scores[player.get_index()])
             self.kill_player(self.current_player)
         if success != len(self.__actions) and not self.__debug and not self.__strict:
             self.debug("Some actions failed, enable strict mode to see more details")
@@ -170,16 +189,17 @@ class Engine:
             time.sleep(self.__sleep)
 
     def check_idle(self):
-        for index in range(len(self.__idle_count)):
-            idle = self.__idle_count[index]
-            if idle >= self.__idle_limit:
-                scores = self.__state.get_scores()
-                for i in range(len(scores)):
-                    if i != index:
-                        self.__players[i].add_score(scores[i] + 200)
-                    else:
-                        self.__players[i].add_score(scores[i] - 200)
-                self.kill_player(self.__players[index])
+        if sum([idle_time >= self.__idle_limit for idle_time in self.__idle_count]) == PLAYER_COUNT:
+            scores = self.__state.get_scores()
+            self.__players[0].add_score(scores[0] - 50)
+            self.__players[1].add_score(scores[1] - 50)
+            self.__result = f'{self.__players[0]} [{scores[0]} --- {scores[1]}] {self.__players[1]} | idle({self.__idle_limit})'
+            self.kill_all()
+
+    def kill_all(self):
+        [p.lose() for p in self.__players]
+        self.__gameover = True
+        self.game_over()
                     
     def kill_player(self, player: Player):
         player.lose()
@@ -346,8 +366,11 @@ class Engine:
                 loser_index = hq.get_owner() 
                 winner_index = hq.get_cell().get_owner()
                 scores = self.__state.get_scores()
-                winner_score = scores[winner_index] + round(math.sqrt(max((MAX_TURNS - self.__turns) // 2), 0)) * 100
-                loser_score = scores[loser_index]
+                reward = round(math.sqrt(max([(MAX_TURNS - self.__turns) // 2, 0]))) * 100 + 500
+                winner_score = scores[winner_index] + reward
+                loser_score = scores[loser_index] + reward // 5
+
+                self.__result = f'{self.__players[0]} [{winner_score} --- {loser_score}] {self.__players[1]} | {self.__players[winner_index]} caputure HQ'
 
                 self.__players[winner_index].add_score(winner_score)
                 self.__players[loser_index].add_score(loser_score)

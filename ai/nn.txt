@@ -22,7 +22,7 @@ Training agent:
 
 Moving agent:
     Input dimension: 11
-    Inputs: [8 surrounding cell, x, y, dir]
+    Inputs: [8 surrounding cell, level, x, y, dir]
     Cell encoding: same as training agent
     Direction encoding: up -> 1, down -> -1, left -> 0.5, right -> -0.5, stay -> 0
     Output: preference on the direction

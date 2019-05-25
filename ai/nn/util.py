@@ -1,4 +1,4 @@
-from ..nn_constants import CROSS_OVER_RATE, MUTATION_RANGE, MUTATION_RATE
+from ..nn_constants import CROSS_OVER_RATE, MUTATION_RANGE, MUTATION_RATE, SWAP_RATE
 import random
 
 def crossover(weight1, weight2):

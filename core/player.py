@@ -22,6 +22,12 @@ class Player:
     def send_input_line(self, line):
         self.message_queue.append(line)
 
+    def activate(self):
+        pass
+
+    def deactivate(self):
+        pass
+
     def reset(self):
         self.moves = 0
         self.turns = 0
