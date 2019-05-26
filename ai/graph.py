@@ -28,6 +28,7 @@ def plot_ai(folder):
             plt.title(f'Learning Graph for {folder}')
             plt.xlabel("Generation")
             plt.ylabel("Score")
+            plt.ylim((0, max(best_scores) * 1.1))
             plt.plot("x", "best", data=df)
             plt.plot("x", "average", data=df)
             plt.show()

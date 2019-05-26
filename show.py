@@ -2,7 +2,7 @@ from ai.population import Population
 from core.constants import LEAGUE
 
 def main():
-    Population(league=LEAGUE.WOOD2, folder="WOOD2.2", visualize=True).start()
+    Population(league=LEAGUE.WOOD2, folder="WOOD2", visualize=True).start()
 
 if __name__ == "__main__":
     try:

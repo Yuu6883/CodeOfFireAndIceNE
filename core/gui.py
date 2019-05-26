@@ -44,8 +44,11 @@ class GUIEngine(Engine):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                self.restart()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    self.restart()
+                elif event.key == pygame.K_k:
+                    self.kill_all()
 
         # Draw background
         self.screen.blit(self.background, (0, 0))

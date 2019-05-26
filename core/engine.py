@@ -366,9 +366,9 @@ class Engine:
                 loser_index = hq.get_owner() 
                 winner_index = hq.get_cell().get_owner()
                 scores = self.__state.get_scores()
-                reward = round(math.sqrt(max([(MAX_TURNS - self.__turns) // 2, 0]))) * 100 + 500
+                reward = round(math.sqrt(max([(MAX_TURNS - self.__turns) // 2, 0]))) * 100 + 1000
                 winner_score = scores[winner_index] + reward
-                loser_score = scores[loser_index] + reward // 5
+                loser_score = scores[loser_index] + reward // 10
 
                 self.__result = f'{self.__players[0]} [{winner_score} --- {loser_score}] {self.__players[1]} | {self.__players[winner_index]} caputure HQ'
 

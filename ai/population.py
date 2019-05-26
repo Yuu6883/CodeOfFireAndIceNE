@@ -24,7 +24,7 @@ class Population:
 
     def __init__(self, size=24, selection_size=6, game_number=1, folder="generations", \
         ideal_generation=1000, idle_limit=100, league:LEAGUE=LEAGUE.WOOD3, restart_generation=20, 
-        visualize=False, batch_size=os.cpu_count()):
+        visualize=False, batch_size=os.cpu_count(), save_every=10):
         
         assert size > selection_size
         assert not (size % batch_size), f'Population Size ({size}) must be divisible by Batch Size ({batch_size})'
@@ -38,6 +38,7 @@ class Population:
         self.folder = folder
         self.ideal_generation = ideal_generation
         self.visualize = visualize
+        self.save_every = save_every
 
         if not os.path.exists(f'./ai/{folder}'):
             os.mkdir(f'./ai/{folder}')
@@ -91,7 +92,7 @@ class Population:
             self.simulated += 1
             self.natural_selection()
             
-        while self.generation < self.ideal_generation:
+        while self.generation < (self.ideal_generation or 2**31):
             self.generation += 1
             self.simulate()            
             self.simulated += 1
@@ -112,7 +113,7 @@ class Population:
                     raise e
         
         self.results = simulate(Packet(self.generation, self.num_game, self.size, self.selection_size,
-                        self.engines[0], 0, 1, self.generation_data, randomize))
+                        self.engines[0], 0, 1, self.generation_data, randomize=randomize))
 
     def natural_selection(self, write=True):
 
@@ -128,7 +129,7 @@ class Population:
 
         best = temp[:self.selection_size]
         
-        if write:
+        if write and not self.generation % self.save_every:
 
             # print("Generation Stats:")
             # print(f'Best: {round(best[0].best)}, Average: {round(best[0].average_score)}')
@@ -148,6 +149,8 @@ class Population:
                     
             print(f'[{pop_best}, {pop_average}] Done writing Gen({self.generation}) files')
             time.sleep(1)
+        else:
+            print(f'Gen {self.generation} Done')
 
         # Make sure the parent joins back
         for index in range(len(best)):

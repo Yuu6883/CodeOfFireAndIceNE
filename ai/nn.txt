@@ -7,8 +7,8 @@ The bot will have 2 - 4 nn attached (depends on which league):
     4 for building tower
 
 Training agent:
-    Input dimension: 16
-    Inputs: [8 surrounding cell, x, y, player_income, player_gold, player_uni_num, enemy_income, enemy_gold, enemy_unit_num]
+    Input dimension: 17
+    Inputs: [8 surrounding cell, x, y, player_income, player_gold, player_uni_num, enemy_income, enemy_gold, enemy_unit_num, turns]
     Cell encoding: VOID -> -1, NEUTRAL -> 0, 
         Enemy_tower -> -0.5, Enemy_mine -> -0.25 Enemy_unit -> -1 / level, Enemy_active -> -0.1, Enemy_inactive -> -0.05
         Player_tower -> 0.5, Player_mine -> 0.25, Player_unit -> 1 / level, Player_active -> 0.1, Player_inactive?? -> 0.05
@@ -21,8 +21,8 @@ Training agent:
         (for WOOD3 [0.5 - 1] -> train level 1)
 
 Moving agent:
-    Input dimension: 11
-    Inputs: [8 surrounding cell, level, x, y, dir]
+    Input dimension: 13
+    Inputs: [8 surrounding cell, level, x, y, dir, turn]
     Cell encoding: same as training agent
     Direction encoding: up -> 1, down -> -1, left -> 0.5, right -> -0.5, stay -> 0
     Output: preference on the direction

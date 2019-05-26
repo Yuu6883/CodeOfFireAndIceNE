@@ -1,6 +1,6 @@
 from core.player import Player
 from core.constants import MAP_HEIGHT, MAP_WIDTH, VOID, NEUTRAL,\
-    UP, LEFT, RIGHT, DOWN, CAPTURE_LEVEL, LEAGUE, DIRECTIONS, STAY, MAX_LEVEL
+    UP, LEFT, RIGHT, DOWN, CAPTURE_LEVEL, LEAGUE, DIRECTIONS, STAY, MAX_LEVEL, MAX_TURNS
 from core.cell import Cell
 from core.building import Building, BUILDING_TYPE
 from core.unit import Unit
@@ -32,7 +32,7 @@ class Data:
             self.wins = bot.win_num
             self.lost = bot.lost_num
             self.scores = bot.scores.copy()
-            self.best = max(*self.scores, 1)
+            self.best = max(max(self.scores), 1) if len(self.scores) else 1
             self.average_score = max([sum(self.scores) / len(self.scores) if len(self.scores) else 0, 1])
         else:
             self.average_score = 1
@@ -278,6 +278,8 @@ class AIBot(Player):
 
         my_gold, enemy_gold = tanh(self.gold / 50), tanh(self.opponent_gold / 50)
 
+        turn = self.turns / MAX_TURNS
+
         results = []
         for cell in self.get_trainable_cells():
             # print(f'Trainable {cell}')
@@ -286,7 +288,7 @@ class AIBot(Player):
             x, y = cell.get_x() / 11, cell.get_y() / 11
 
             inputs = encoded + [x, y, my_unit, enemy_unit, my_income, enemy_income, \
-                my_gold, enemy_gold]
+                my_gold, enemy_gold, turn]
             # print(f'Inputs: {inputs}')
             output = self.training_agent.predict(inputs)[0][0]
             # print(f'Output: {output}\n')
@@ -315,6 +317,8 @@ class AIBot(Player):
     def move(self):
         assert self.moving_agent != None
         # Make MOVE actions
+
+        turn = self.turns / MAX_TURNS
         
         for unit_id in self.my_units:
             unit = self.my_units[unit_id]
@@ -324,7 +328,7 @@ class AIBot(Player):
 
             neighbors = self.get_neighbor_move_encoding(unit, cell)
 
-            result = [self.moving_agent.predict(neighbors + [level, x, y, DIRECTION_ENCODE[direction]]) \
+            result = [self.moving_agent.predict(neighbors + [level, x, y, DIRECTION_ENCODE[direction], turn]) \
                 for direction in DIRECTIONS]
 
             result = [i[0][0] for i in result]
