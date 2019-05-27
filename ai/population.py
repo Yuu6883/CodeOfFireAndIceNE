@@ -1,6 +1,6 @@
 from core.constants import LEAGUE, PLAYER_COUNT
 from ai.bot import AIBot, Data
-from ai.nn.util import mutate, crossover, SWAP_RATE
+from ai.nn.util import mutate, crossover, SWAP_RATE, REGEN_RATE
 from core.engine import Engine
 from multiprocessing.pool import Pool
 from multiprocessing.sharedctypes import Value
@@ -22,12 +22,13 @@ class Population:
 
     progress = 0
 
-    def __init__(self, size=24, selection_size=6, game_number=1, folder="generations", \
+    def __init__(self, size=24, selection_size=6, game_number=5, folder="generations", \
         ideal_generation=1000, idle_limit=100, league:LEAGUE=LEAGUE.WOOD3, restart_generation=20, 
-        visualize=False, batch_size=os.cpu_count(), save_every=10):
+        visualize=False, batch_size=os.cpu_count(), save_every=10, print_game = False):
         
         assert size > selection_size
         assert not (size % batch_size), f'Population Size ({size}) must be divisible by Batch Size ({batch_size})'
+        assert not ((size // batch_size) % 2), f'Batch Data must be an even number ({(size // batch_size)})'
         
         self.batch_size = batch_size
         self.generation = 0
@@ -39,6 +40,7 @@ class Population:
         self.ideal_generation = ideal_generation
         self.visualize = visualize
         self.save_every = save_every
+        self.print_game = print_game
 
         if not os.path.exists(f'./ai/{folder}'):
             os.mkdir(f'./ai/{folder}')
@@ -105,7 +107,7 @@ class Population:
                     with Pool(processes=self.batch_size) as p:
                         packets = [Packet(self.generation, self.num_game, self.size, self.selection_size,
                             self.engines[batch], batch, self.batch_size, self.generation_data[batch*(self.size // self.batch_size):\
-                            (batch+1)*(self.size // self.batch_size)], randomize=randomize) for batch in range(self.batch_size)]
+                            (batch+1)*(self.size // self.batch_size)], print_game=self.print_game, randomize=randomize) for batch in range(self.batch_size)]
 
                         self.results = np.concatenate(p.map(simulate, packets)).tolist()
                     return
@@ -113,7 +115,7 @@ class Population:
                     raise e
         
         self.results = simulate(Packet(self.generation, self.num_game, self.size, self.selection_size,
-                        self.engines[0], 0, 1, self.generation_data, randomize=randomize))
+                        self.engines[0], 0, 1, self.generation_data, print_game=True, randomize=randomize))
 
     def natural_selection(self, write=True):
 
@@ -149,7 +151,7 @@ class Population:
                     
             print(f'[{pop_best}, {pop_average}] Done writing Gen({self.generation}) files')
             time.sleep(1)
-        else:
+        elif write:
             print(f'Gen {self.generation} Done')
 
         # Make sure the parent joins back
@@ -164,18 +166,21 @@ class Population:
             data = Data()
             data.uid = parent1.uid[:2] + parent2.uid[2:]
             # print(f'Generated new offspring {data.uid}')
-
-            if random.random() < SWAP_RATE:
-                time.sleep(0.1)
-                if random.random() > 0.5:
-                    data.training_weights = parent1.training_weights.copy()
-                    data.moving_weights = parent2.moving_weights.copy() 
-                else:
-                    data.training_weights = parent2.training_weights.copy()
-                    data.moving_weights = parent1.moving_weights.copy() 
+            factor = sum([parent1.get_score() <= 150, parent2.get_score() <= 150]) * 0.4
+            if random.random() < REGEN_RATE + factor:
+                data.should_randomize = True
             else:
-                data.training_weights = mutate(crossover(parent1.training_weights, parent2.training_weights))
-                data.moving_weights = mutate(crossover(parent1.moving_weights, parent2.moving_weights))
+                if random.random() < SWAP_RATE:
+                    time.sleep(0.1)
+                    if random.random() > 0.5:
+                        data.training_weights = parent1.training_weights.copy()
+                        data.moving_weights = parent2.moving_weights.copy() 
+                    else:
+                        data.training_weights = parent2.training_weights.copy()
+                        data.moving_weights = parent1.moving_weights.copy() 
+                else:
+                    data.training_weights = mutate(crossover(parent1.training_weights, parent2.training_weights))
+                    data.moving_weights = mutate(crossover(parent1.moving_weights, parent2.moving_weights))
             # print("Offspring:", len(data.training_weights), len(data.moving_weights))
             self.generation_data[index] = data
 
@@ -214,7 +219,7 @@ class Population:
 
 class Packet:
     def __init__(self, generation, num_game, size, selection_size, engine, 
-        batch, batch_size, generation_data, progress=0, randomize=False):
+        batch, batch_size, generation_data, progress=0, print_game = False, randomize=False):
         self.generation = generation
         self.num_game = num_game
         self.size = size
@@ -225,6 +230,7 @@ class Packet:
         self.generation_data = generation_data
         self.randomize = randomize
         self.progress = progress
+        self.print_game = print_game
 
     def __repr__(self):
         # return f'Generation{self.generation} Games{self.num_game} Population{self.size} Selection Size{self.selection_size} ' +\
@@ -260,7 +266,8 @@ def simulate(packet: Packet):
             else:
                 engine.restart()
                 
-            # print(f'Gen{packet.generation} Batch{packet.batch} Game{i + 1} Result-{engine.get_result()}')
+            if packet.print_game:
+                print(f'Gen{packet.generation} Batch{packet.batch} Game{i + 1} Result-{engine.get_result()}')
             # packet.progress += 1
             # print(f'Progress: {packet.progress.value}/{packet.size * packet.num_game}')
         

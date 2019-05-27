@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import random
-from ai.nn_constants import TRAINING_INPUT, TRAINING_HLAYER1, \
+from ai.nn_constants import TRAINING_INPUT, TRAINING_HLAYER1, TRAINING_OUT,\
     MUTATION_RATE, MUTATION_RANGE, CROSS_OVER_RATE
 x = tf.placeholder("float", [None, TRAINING_INPUT])
 flatten = np.ndarray.flatten
@@ -24,11 +24,11 @@ class TrainingAgent:
     def randomize(self):
         self.b1 = tf.Variable(tf.random_normal([TRAINING_HLAYER1]))
         # self.b2 = tf.Variable(tf.random_normal([TRAINING_HLAYER2]))
-        self.b_out = tf.Variable(tf.random_normal([1]))
+        self.b_out = tf.Variable(tf.random_normal([TRAINING_OUT]))
 
         self.h1 = tf.Variable(tf.random_normal([TRAINING_INPUT, TRAINING_HLAYER1]))
         # self.h2 = tf.Variable(tf.random_normal([TRAINING_HLAYER1, TRAINING_HLAYER2]))
-        self.h_out = tf.Variable(tf.random_normal([TRAINING_HLAYER1, 1]))
+        self.h_out = tf.Variable(tf.random_normal([TRAINING_HLAYER1, TRAINING_OUT]))
         self.build_layers()
 
     def build_layers(self):
@@ -63,14 +63,14 @@ class TrainingAgent:
         offset += TRAINING_HLAYER1
         # b2_weights = weights[offset:offset + TRAINING_HLAYER2]
         # offset += TRAINING_HLAYER2
-        b_out_weights = weights[offset:offset + 1]
-        offset += 1
+        b_out_weights = weights[offset:offset + TRAINING_OUT]
+        offset += TRAINING_OUT
         h1_weights = weights[offset: offset + TRAINING_INPUT * TRAINING_HLAYER1]
         offset += TRAINING_INPUT * TRAINING_HLAYER1
         # h2_weights = weights[offset: offset + TRAINING_HLAYER1 * TRAINING_HLAYER2]
         # offset += TRAINING_HLAYER1 * TRAINING_HLAYER2
-        h_out_weights = weights[offset: offset + TRAINING_HLAYER1]
-        offset += TRAINING_HLAYER1
+        h_out_weights = weights[offset: offset + TRAINING_HLAYER1 * TRAINING_OUT]
+        offset += TRAINING_HLAYER1 * TRAINING_OUT
 
         if len(weights) != offset:
             print(len(weights), offset)
@@ -80,12 +80,12 @@ class TrainingAgent:
         ops = [\
         self.h1.assign(np.reshape(h1_weights, (TRAINING_INPUT, TRAINING_HLAYER1))),
         # self.h2.assign(np.reshape(h2_weights, (TRAINING_HLAYER1, TRAINING_HLAYER2))),
-        self.h_out.assign(np.reshape(h_out_weights, (TRAINING_HLAYER1, 1))),
+        self.h_out.assign(np.reshape(h_out_weights, (TRAINING_HLAYER1, TRAINING_OUT))),
 
         # Set bias
         self.b1.assign(np.reshape(b1_weights, (TRAINING_HLAYER1))),
         # self.b2.assign(np.reshape(b2_weights, (TRAINING_HLAYER2))),
-        self.b_out.assign(np.reshape(b_out_weights, (1)))]
+        self.b_out.assign(np.reshape(b_out_weights, (TRAINING_OUT)))]
 
         for op in ops:
             self.sess.run(op)

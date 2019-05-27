@@ -13,7 +13,7 @@ class Engine:
 
     def __init__(self, league: LEAGUE = LEAGUE.WOOD3, sleep = 0, \
         debug = False, strict = False, seed = None, auto_restart=False,\
-            silence=False, idle_limit = 5):
+            silence=False, idle_limit = 25):
         self.__players = []
         self.current_player: Player = None
         self.__state: GameState = None
@@ -112,6 +112,12 @@ class Engine:
     def get_gold(self, index: int):
         return self.__state.get_gold(index)
 
+    def is_debug(self):
+        return self.__debug
+
+    def is_strict(self):
+        return self.__strict
+
     def game_over(self):
         self.__gameover= True
         self.__started = False
@@ -132,6 +138,8 @@ class Engine:
         if self.__gameover:
             self.game_over()
             return
+
+        self.debug("\n\n\n")
 
         if self.__turns // 2 >= MAX_TURNS:
             scores = self.__state.get_scores()
@@ -158,7 +166,8 @@ class Engine:
         except Exception as e:
             self.print(f'{self.current_player} crashed at turn {self.__turns // 2}')
             self.print(e)
-            # raise e
+            if self.__strict:
+                raise e
         try:
             self.parse_action()
             success = sum([self.execute_action(action) for action in self.__actions])
@@ -210,7 +219,7 @@ class Engine:
     def parse_action(self):
         # Referee.java readInput
         msg = self.current_player.get_message()
-        self.debug("Player Message:" + msg)
+        self.debug(f'{self.current_player} Message: {msg}')
         actions_str = msg.split(";")
         for action_str in actions_str:
             action_str = action_str.strip(" ")

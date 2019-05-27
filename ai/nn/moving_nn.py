@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import random
-from ai.nn_constants import MOVING_INPUT, MOVING_HLAYER1, \
+from ai.nn_constants import MOVING_INPUT, MOVING_HLAYER1, MOVING_OUT,\
     MUTATION_RATE, MUTATION_RANGE, CROSS_OVER_RATE
 x = tf.placeholder("float", [None, MOVING_INPUT])
 flatten = np.ndarray.flatten
@@ -24,11 +24,11 @@ class MovingAgent:
     def randomize(self):
         self.b1 = tf.Variable(tf.random_normal([MOVING_HLAYER1]))
         # self.b2 = tf.Variable(tf.random_normal([MOVING_HLAYER2]))
-        self.b_out = tf.Variable(tf.random_normal([1]))
+        self.b_out = tf.Variable(tf.random_normal([MOVING_OUT]))
 
         self.h1 = tf.Variable(tf.random_normal([MOVING_INPUT, MOVING_HLAYER1]))
         # self.h2 = tf.Variable(tf.random_normal([MOVING_HLAYER1, MOVING_HLAYER2]))
-        self.h_out = tf.Variable(tf.random_normal([MOVING_HLAYER1, 1]))
+        self.h_out = tf.Variable(tf.random_normal([MOVING_HLAYER1, MOVING_OUT]))
         self.build_layers()
 
     def build_layers(self):
@@ -63,14 +63,14 @@ class MovingAgent:
         offset += MOVING_HLAYER1
         # b2_weights = weights[offset:offset + MOVING_HLAYER2]
         # offset += MOVING_HLAYER2
-        b_out_weights = weights[offset:offset + 1]
-        offset += 1
+        b_out_weights = weights[offset:offset + MOVING_OUT]
+        offset += MOVING_OUT
         h1_weights = weights[offset: offset + MOVING_INPUT * MOVING_HLAYER1]
         offset += MOVING_INPUT * MOVING_HLAYER1
         # h2_weights = weights[offset: offset + MOVING_HLAYER1 * MOVING_HLAYER2]
         # offset += MOVING_HLAYER1 * MOVING_HLAYER2
-        h_out_weights = weights[offset: offset + MOVING_HLAYER1]
-        offset += MOVING_HLAYER1
+        h_out_weights = weights[offset: offset + MOVING_HLAYER1 * MOVING_OUT]
+        offset += MOVING_HLAYER1 * MOVING_OUT
 
         if len(weights) != offset:
             print(len(weights), offset)
@@ -80,12 +80,12 @@ class MovingAgent:
         ops = [\
         self.h1.assign(np.reshape(h1_weights, (MOVING_INPUT, MOVING_HLAYER1))),
         # self.h2.assign(np.reshape(h2_weights, (MOVING_HLAYER1, MOVING_HLAYER2))),
-        self.h_out.assign(np.reshape(h_out_weights, (MOVING_HLAYER1, 1))),
+        self.h_out.assign(np.reshape(h_out_weights, (MOVING_HLAYER1, MOVING_OUT))),
 
         # Set bias
         self.b1.assign(np.reshape(b1_weights, (MOVING_HLAYER1))),
         # self.b2.assign(np.reshape(b2_weights, (MOVING_HLAYER2))),
-        self.b_out.assign(np.reshape(b_out_weights, (1)))]
+        self.b_out.assign(np.reshape(b_out_weights, (MOVING_OUT)))]
 
         for op in ops:
             self.sess.run(op)

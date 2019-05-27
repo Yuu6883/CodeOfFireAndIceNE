@@ -26,6 +26,24 @@ class GUIEngine(Engine):
             pygame.display.set_caption("A Code of Fire and Ice")
             self.load_images()
             GUIEngine.instance = self
+        self.__pause = False
+    
+    def pause(self):
+        self.debug("Paused")
+        self.__pause = True
+
+    def resume(self):
+        self.debug("Resume")
+        self.__pause = False
+
+    def is_pausing(self):
+        return self.__pause
+
+    def toggle_pause(self):
+        if self.is_pausing():
+            self.resume()
+        else:
+            self.pause()
 
     def load_images(self):
         self.images = {filename.replace(".png", "").replace(".jpg", ""): pygame.image.load("./core/images/" + filename) \
@@ -49,6 +67,8 @@ class GUIEngine(Engine):
                     self.restart()
                 elif event.key == pygame.K_k:
                     self.kill_all()
+                elif event.key == pygame.K_SPACE:
+                    self.toggle_pause()
 
         # Draw background
         self.screen.blit(self.background, (0, 0))
@@ -114,7 +134,7 @@ class GUIEngine(Engine):
                     self.screen.blit(self.images[icon], (OFFSET[0] + cell.get_x() * (TILE_LENGTH + GAP),
                         OFFSET[1] + cell.get_y() * (TILE_LENGTH + GAP)))
 
-        p1, p2 = str(self.get_player(0))[:5], str(self.get_player(1))[:5]
+        p1, p2 = str(self.get_player(0)), str(self.get_player(1))
         income1, income2 = self.get_income(0), self.get_income(1)
         gold1, gold2 = self.get_gold(0), self.get_gold(1)
         turns = self.get_turns()
@@ -129,8 +149,12 @@ class GUIEngine(Engine):
         p1_text = font.render(p1, True, (255,0,0))
         p2_text = font.render(p2, True, (33, 168, 221))
 
-        turn_text = font.render(f'Turn {turns // 2}', True, (33, 168, 221)) if not turns % 2 else \
-            font.render(f'Turn {turns // 2}', True, (255,0,0))
+        text = f'Turn {turns // 2}'
+        if self.is_pausing():
+            text += " (Pause)"
+
+        turn_text = font.render(text, True, (33, 168, 221)) if not turns % 2 else \
+            font.render(text, True, (255,0,0))
 
         gold1_text = font2.render(f'Gold: {gold1}', True, (255, 255, 255))
         gold2_text = font2.render(f'Gold: {gold2}', True, (255, 255, 255))
@@ -148,4 +172,5 @@ class GUIEngine(Engine):
         
         pygame.display.flip()
         
-        super().gameloop()
+        if not self.is_pausing():
+            super().gameloop()

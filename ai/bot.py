@@ -1,5 +1,5 @@
 from core.player import Player
-from core.constants import MAP_HEIGHT, MAP_WIDTH, VOID, NEUTRAL,\
+from core.constants import MAP_HEIGHT, MAP_WIDTH, VOID, NEUTRAL, UNIT_COST, UNIT_UPKEEP,\
     UP, LEFT, RIGHT, DOWN, CAPTURE_LEVEL, LEAGUE, DIRECTIONS, STAY, MAX_LEVEL, MAX_TURNS
 from core.cell import Cell
 from core.building import Building, BUILDING_TYPE
@@ -281,7 +281,6 @@ class AIBot(Player):
 
         turn = self.turns / MAX_TURNS
 
-        results = []
         for cell in self.get_trainable_cells():
             # print(f'Trainable {cell}')
             encoded = self.get_neighbor_encoding(cell)
@@ -291,24 +290,17 @@ class AIBot(Player):
             inputs = encoded + [x, y, my_unit, enemy_unit, my_income, enemy_income, \
                 my_gold, enemy_gold, turn]
             # print(f'Inputs: {inputs}')
-            output = self.training_agent.predict(inputs)[0][0]
-            # print(f'Output: {output}\n')
-            results.append({"cell": cell, "output": output})
+            result = self.training_agent.predict(inputs)[0].tolist()
+            # print(f'Output: {result}')
+            level = result.index(max(result))
+            if not level:
+                continue
 
-        results = sorted(results, key=lambda key: key["output"], reverse=True)
-        # print(f'Results: {results}')
-        for result in results:
-            if result["output"] < 0.5:
-                break
-            if self.get_league() == LEAGUE.WOOD3:
-                self.make_train_action(result["cell"].get_x(), result["cell"].get_y(), 1)
-            else:
-                if result["output"] < 0.7:
-                    self.make_train_action(result["cell"].get_x(), result["cell"].get_y(), 1)
-                elif result["output"] < 0.9:
-                    self.make_train_action(result["cell"].get_x(), result["cell"].get_y(), 2)
-                else:
-                    self.make_train_action(result["cell"].get_x(), result["cell"].get_y(), 3)
+            # For next prediction
+            self.gold -= UNIT_COST[level]
+            self.income -= UNIT_UPKEEP[level]
+        
+            self.make_train_action(cell.get_x(), cell.get_y(), level)
 
     def make_train_action(self, x, y, level):
         if self.transpose:
@@ -329,7 +321,7 @@ class AIBot(Player):
 
             neighbors = self.get_neighbor_move_encoding(unit, cell)
 
-            result = self.moving_agent.predict(neighbors + [level, x, y, turn])[0]
+            result = self.moving_agent.predict(neighbors + [level, x, y, turn])[0].tolist()
 
             prediction = DIRECTIONS[result.index(max(result))]
 
