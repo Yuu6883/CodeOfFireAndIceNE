@@ -37,6 +37,7 @@ class Data:
         else:
             self.average_score = 1
             self.best = 1
+        self.should_randomize = False
 
     def get_score(self):
         if self.best < 0 or self.average_score < 0:
@@ -328,10 +329,7 @@ class AIBot(Player):
 
             neighbors = self.get_neighbor_move_encoding(unit, cell)
 
-            result = [self.moving_agent.predict(neighbors + [level, x, y, DIRECTION_ENCODE[direction], turn]) \
-                for direction in DIRECTIONS]
-
-            result = [i[0][0] for i in result]
+            result = self.moving_agent.predict(neighbors + [level, x, y, turn])[0]
 
             prediction = DIRECTIONS[result.index(max(result))]
 
@@ -343,6 +341,14 @@ class AIBot(Player):
             return
         if self.transpose:
             x, y = self.trs(x, y)
+            if direction == LEFT:
+                direction = RIGHT
+            elif direction == UP:
+                direction = DOWN
+            elif direction == RIGHT:
+                direction = LEFT
+            elif direction == DOWN:
+                direction = UP
         if direction == UP:
             y -= 1
         elif direction == DOWN:
@@ -364,10 +370,13 @@ class AIBot(Player):
         self.uid = str(data.uid)
         self.reset()
         self.reset_stats()
-        self.training_agent = TrainingAgent(self.sess)
-        self.moving_agent = MovingAgent(self.sess)
-        self.training_agent.set_weights(data.training_weights)
-        self.moving_agent.set_weights(data.moving_weights)
+        if data.should_randomize:
+            self.randomize()
+        else:
+            self.training_agent = TrainingAgent(self.sess)
+            self.moving_agent = MovingAgent(self.sess)
+            self.training_agent.set_weights(data.training_weights)
+            self.moving_agent.set_weights(data.moving_weights)
 
     def randomize(self):
         import random
