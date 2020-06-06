@@ -1,3 +1,6 @@
+# Project Discontinued
+Why did I even bother to make this? Most time was wasted on implementing the game in python and rendering with pygame. Actual NEAT part was not even well explored and the result was terrible.
+
 # CodeOfFireAndIceNE
 Open source AI for CodeOfFireAndIce challenge on codingame.com
 ![](https://i.imgur.com/dVHeDsY.png)
